@@ -1,0 +1,2 @@
+.wwp-gallery-row { border: 1px solid #c3c4c7; padding: 16px; margin: 12px 0; background: #fff; }
+.wwp-gallery-preview img, #wwp-logo-preview img { display: block; max-width: 150px; max-height: 150px; object-fit: contain; }

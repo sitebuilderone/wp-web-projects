@@ -46,3 +46,6 @@ wp-config.php
 # Note: If you wish to whitelist themes,
 # uncomment the next line
 #/wp-content/themes
+
+# This repository is the plugin itself, not a WordPress core checkout.
+!/wp-web-projects.php
