@@ -18,6 +18,7 @@ The plugin uses the theme's Bootstrap CSS and does not enqueue Bootstrap. It add
 | Shortcode | Purpose | Attributes |
 | --- | --- | --- |
 | `[wwp_portfolio]` | Filterable grid with featured image, title and excerpt | None |
+| `[wwp_portfolio_canvas]` | Canvas-style grid with a compact Categories/Features filter toolbar | None |
 | `[wwp_gallery]` | Ordered gallery with lightbox, image headings and descriptions | `id="123"` (optional) |
 | `[wwp_project_logo]` | Project logo | `id="123"` (optional) |
 | `[wwp_project_link]` | External HTTPS website button, opens a new tab | `id="123"`, `label="Visit website"` (optional) |
@@ -25,6 +26,8 @@ The plugin uses the theme's Bootstrap CSS and does not enqueue Bootstrap. It add
 Project shortcodes use the current post by default, including inside a project loop. Use `id` when embedding project data on another page. Password-protected project data is hidden until its password has been entered. Unpublished project data is restricted to users allowed to read that project. Use native WordPress/theme fields for the project title, content, excerpt, featured image and taxonomies.
 
 ### Portfolio behavior
+
+Use `[wwp_portfolio_canvas]` for the Canvas-style alternative: a compact toolbar with labelled Categories and Features groups, a **Show All** button for each group, and four columns on wide screens, two on medium screens and one on small screens. Both groups and Reset sit on one row when space allows, with smaller labels and buttons; the toolbar wraps on narrow screens. Cards use a borderless presentation with 4:3 thumbnails; theme Canvas/Bootstrap colours are inherited without loading Canvas scripts, Bootstrap or another library. All projects remain available; the number of project rows is not limited. Filtering, ordering, counts, excerpts, project/website buttons and the image lightbox work as below. The original `[wwp_portfolio]` layout is unchanged. Replace the shortcode in your chosen page or LiveCanvas section to opt in; the plugin does not edit pages automatically.
 
 On Picostrap pages, the outer content column containing the portfolio uses the equivalent of `col-12 py-2`: full width, no left offset, and `.5rem` vertical padding. This scoped CSS override does not change the parent theme files or other pages.
 

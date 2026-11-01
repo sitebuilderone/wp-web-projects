@@ -5,7 +5,7 @@ $GLOBALS['stored'] = array();
 $GLOBALS['allowed'] = true;
 function add_action( ...$args ) {}
 function add_filter( ...$args ) {}
-function add_shortcode( ...$args ) {}
+function add_shortcode( $tag, $callback ) { $GLOBALS['shortcodes'][$tag] = $callback; }
 function register_activation_hook( ...$args ) {}
 function register_deactivation_hook( ...$args ) {}
 function __( $text, $domain = '' ) { return $text; }
@@ -76,7 +76,7 @@ function wp_trim_words( $text, $length, $more ) { $words = preg_split( '/\s+/', 
 function get_the_excerpt( $post ) { throw new RuntimeException( 'Theme-filtered excerpts must not be used for cards' ); }
 function wp_enqueue_script( $handle ) {}
 function get_posts( $args ) { return array( $GLOBALS['fixture_project'] ); }
-function get_the_terms( $id, $taxonomy ) { return false; }
+function get_the_terms( $id, $taxonomy ) { return $GLOBALS['fixture_terms'][$taxonomy] ?? false; }
 function esc_attr( $text ) { return htmlspecialchars( (string) $text, ENT_QUOTES ); }
 function esc_html_e( $text, $domain = '' ) { echo esc_html( $text ); }
 function esc_attr_e( $text, $domain = '' ) { echo esc_attr( $text ); }
@@ -121,3 +121,21 @@ check_theme_lightbox_exclusion( WWP_Plugin::portfolio( array() ) );
 $GLOBALS['stored'][42]['_wwp_gallery'] = array( array( 'id' => 10, 'heading' => 'Gallery image', 'description' => 'Details' ) );
 check_theme_lightbox_exclusion( WWP_Plugin::gallery( array( 'id' => 42 ) ) );
 echo "PASS: portfolio and gallery opt out of Picostrap duplicate lightbox\n";
+
+$GLOBALS['fixture_terms'] = array(
+	WWP_Plugin::CATEGORY => array( (object) array( 'term_id' => 1, 'name' => 'Industry & client' ) ),
+	WWP_Plugin::FEATURE => array( (object) array( 'term_id' => 2, 'name' => 'Online booking' ) ),
+);
+check( is_callable( $GLOBALS['shortcodes']['wwp_portfolio_canvas'] ), 'Register Canvas shortcode' );
+$html = WWP_Plugin::portfolio_canvas( array() );
+check( 2 === substr_count( $html, 'class="wwp-filter-bar"' ), 'Two horizontal filter groups' );
+check( false !== strpos( $html, 'data-wwp-all="' . WWP_Plugin::CATEGORY . '"' ), 'Category Show All' );
+check( false !== strpos( $html, 'data-wwp-all="' . WWP_Plugin::FEATURE . '"' ), 'Feature Show All' );
+check( false !== strpos( $html, 'Industry &amp; client' ), 'Escape filter term labels' );
+check( false !== strpos( $html, 'col-xl-3 wwp-project' ), 'Four-column Canvas grid' );
+check( false !== strpos( $html, '>View project</a>' ), 'Canvas keeps explicit project action' );
+check_theme_lightbox_exclusion( $html );
+$original = WWP_Plugin::portfolio( array() );
+check( false !== strpos( $original, 'col-lg-3 wwp-filters' ) && false !== strpos( $original, 'col-xl-4 wwp-project' ), 'Original sidebar and three-column grid preserved' );
+check( false === strpos( $original, 'data-wwp-all' ), 'Canvas controls do not affect original shortcode' );
+echo "PASS: Canvas shortcode, two filter bars, escaped terms, four columns and original layout preservation\n";

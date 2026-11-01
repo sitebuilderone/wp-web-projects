@@ -3,6 +3,7 @@
   document.querySelectorAll('[data-wwp-portfolio]').forEach((root) => {
     const cards = [...root.querySelectorAll('.wwp-project')].map((element) => ({ element, terms: JSON.parse(element.dataset.wwpTerms) }));
     const inputs = [...root.querySelectorAll('input[data-taxonomy]')];
+    const allButtons = [...root.querySelectorAll('[data-wwp-all]')];
     const matches = (card, selections, ignore) => Object.entries(selections).every(([taxonomy, ids]) => taxonomy === ignore || ids.length === 0 || ids.some((id) => card.terms[taxonomy].includes(id)));
     function update() {
       const selections = {};
@@ -22,6 +23,9 @@
         input.closest('label').querySelector('[data-wwp-count]').textContent = `(${count})`;
         input.disabled = count === 0 && !input.checked;
       });
+      allButtons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(!inputs.some((input) => input.dataset.taxonomy === button.dataset.wwpAll && input.checked)));
+      });
       const status = root.querySelector('[data-wwp-status]');
       status.textContent = status.dataset.format.replace('%d', total);
       root.querySelector('[data-wwp-empty]').hidden = total !== 0;
@@ -29,6 +33,10 @@
     root.querySelector('.wwp-filters').hidden = false;
     root.querySelector('.wwp-results').classList.add('wwp-filtered-results');
     inputs.forEach((input) => input.addEventListener('change', update));
+    allButtons.forEach((button) => button.addEventListener('click', () => {
+      inputs.forEach((input) => { if (input.dataset.taxonomy === button.dataset.wwpAll) input.checked = false; });
+      update();
+    }));
     root.querySelector('[data-wwp-reset]').addEventListener('click', () => {
       inputs.forEach((input) => { input.checked = false; });
       update();

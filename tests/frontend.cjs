@@ -11,9 +11,10 @@ function portfolio() {
     return element({ dataset: { taxonomy }, value: String(id), checked: false, closest: () => ({ querySelector: () => count }), count });
   });
   const status = { dataset: { format: '%d projects' } };
+  const allButtons = ['category', 'feature'].map((taxonomy) => element({ dataset: { wwpAll: taxonomy }, setAttribute(name, value) { this[name] = value; } }));
   const empty = element(), filters = element(), reset = element();
   const nodes = { '[data-wwp-status]': status, '[data-wwp-empty]': empty, '.wwp-filters': filters, '.wwp-results': { classList: { add() {} } }, '[data-wwp-reset]': reset };
-  return { cards, inputs, status, empty, reset, querySelector: (selector) => nodes[selector], querySelectorAll: (selector) => selector === '.wwp-project' ? cards : inputs };
+  return { cards, inputs, allButtons, status, empty, reset, querySelector: (selector) => nodes[selector], querySelectorAll: (selector) => selector === '.wwp-project' ? cards : selector === '[data-wwp-all]' ? allButtons : inputs };
 }
 const first = portfolio(), second = portfolio();
 const image = {}, heading = {}, description = {}, position = {};
@@ -38,6 +39,15 @@ assert.equal(first.empty.hidden, false);
 first.reset.listeners.click();
 assert.equal(first.status.textContent, '3 projects');
 assert(first.inputs.every((i) => !i.checked && !i.disabled));
+first.inputs[0].checked = true; first.inputs[3].checked = true; first.inputs[0].listeners.change();
+assert.equal(first.allButtons[0]['aria-pressed'], 'false');
+first.allButtons[0].listeners.click();
+assert.equal(first.allButtons[0]['aria-pressed'], 'true');
+assert.equal(first.inputs[3].checked, true, 'Category Show All preserves the feature selection');
+assert.deepEqual(first.cards.map((c) => c.hidden), [true, false, false]);
+assert.equal(second.status.textContent, '3 projects', 'Show All stays within its instance');
+first.allButtons[1].listeners.click();
+assert.equal(first.status.textContent, '3 projects');
 links[0].listeners.click({ preventDefault() {} });
 assert.equal(dialog.open, true); assert.equal(image.alt, 'Alt 0');
 next.listeners.click(); assert.equal(image.src, 'image-1.jpg');

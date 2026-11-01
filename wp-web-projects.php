@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Web Projects
  * Description: Website portfolio projects, categories, features, filterable Bootstrap cards and image galleries.
- * Version: 1.0.3
+ * Version: 1.0.5
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: SiteBuilderOne
@@ -26,6 +26,7 @@ final class WWP_Plugin {
 		// Register styles early: LiveCanvas may render shortcodes after wp_head.
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'front_assets' ) );
 		add_shortcode( 'wwp_portfolio', array( __CLASS__, 'portfolio' ) );
+		add_shortcode( 'wwp_portfolio_canvas', array( __CLASS__, 'portfolio_canvas' ) );
 		add_shortcode( 'wwp_gallery', array( __CLASS__, 'gallery' ) );
 		add_shortcode( 'wwp_project_logo', array( __CLASS__, 'logo' ) );
 		add_shortcode( 'wwp_project_link', array( __CLASS__, 'link' ) );
@@ -116,12 +117,12 @@ final class WWP_Plugin {
 	public static function admin_assets() {
 		$screen = get_current_screen();
 		if ( ! $screen || self::TYPE !== $screen->post_type || 'post' !== $screen->base ) { return; }
-		wp_enqueue_media(); wp_enqueue_script( 'wwp-admin', plugins_url( 'assets/admin.js', __FILE__ ), array( 'jquery', 'media-views' ), '1.0.3', true );
-		wp_enqueue_style( 'wwp-admin', plugins_url( 'assets/admin.css', __FILE__ ), array(), '1.0.3' );
+		wp_enqueue_media(); wp_enqueue_script( 'wwp-admin', plugins_url( 'assets/admin.js', __FILE__ ), array( 'jquery', 'media-views' ), '1.0.5', true );
+		wp_enqueue_style( 'wwp-admin', plugins_url( 'assets/admin.css', __FILE__ ), array(), '1.0.5' );
 	}
 	public static function front_assets() {
-		wp_enqueue_style( 'wwp-frontend', plugins_url( 'assets/frontend.css', __FILE__ ), array(), '1.0.3' );
-		wp_register_script( 'wwp-frontend', plugins_url( 'assets/frontend.js', __FILE__ ), array(), '1.0.3', true );
+		wp_enqueue_style( 'wwp-frontend', plugins_url( 'assets/frontend.css', __FILE__ ), array(), '1.0.5' );
+		wp_register_script( 'wwp-frontend', plugins_url( 'assets/frontend.js', __FILE__ ), array(), '1.0.5', true );
 	}
 	private static function project_id( $atts ) {
 		$id = ! empty( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
@@ -153,6 +154,12 @@ final class WWP_Plugin {
 		<?php
 	}
 	public static function portfolio( $atts ) {
+		return self::render_portfolio( false );
+	}
+	public static function portfolio_canvas( $atts ) {
+		return self::render_portfolio( true );
+	}
+	private static function render_portfolio( $canvas ) {
 		wp_enqueue_script( 'wwp-frontend' );
 		$posts = get_posts( array( 'post_type' => self::TYPE, 'post_status' => 'publish', 'has_password' => false, 'posts_per_page' => -1, 'orderby' => array( 'menu_order' => 'ASC', 'title' => 'ASC' ), 'no_found_rows' => true ) );
 		$groups = array( self::CATEGORY => __( 'Categories', 'wp-web-projects' ), self::FEATURE => __( 'Features', 'wp-web-projects' ) );
@@ -169,20 +176,21 @@ final class WWP_Plugin {
 			$cards[] = array( 'post' => $post, 'ids' => $ids );
 		}
 		ob_start(); ?>
-		<div class="wwp-portfolio" data-wwp-portfolio data-wwp-gallery>
-		<div class="row g-4"><aside class="col-lg-3 wwp-filters" hidden>
+		<div class="wwp-portfolio<?php echo $canvas ? ' wwp-portfolio-canvas' : ''; ?>" data-wwp-portfolio data-wwp-gallery>
+		<div class="row g-4"><aside class="<?php echo $canvas ? 'col-12' : 'col-lg-3'; ?> wwp-filters" hidden>
 		<?php foreach ( $groups as $taxonomy => $label ) :
 			$list = $terms[ $taxonomy ] ?? array(); uasort( $list, function( $a, $b ) { return strnatcasecmp( $a->name, $b->name ); } ); ?>
 			<fieldset class="mb-4"><legend class="h5"><?php echo esc_html( $label ); ?></legend>
+			<?php if ( $canvas ) : ?><div class="wwp-filter-bar"><button type="button" class="wwp-filter-all" data-wwp-all="<?php echo esc_attr( $taxonomy ); ?>" aria-pressed="true"><?php esc_html_e( 'Show All', 'wp-web-projects' ); ?></button><?php endif; ?>
 			<?php foreach ( $list as $term ) : ?>
 			<label class="wwp-filter-option"><input type="checkbox" class="form-check-input" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" value="<?php echo esc_attr( $term->term_id ); ?>"> <span><?php echo esc_html( $term->name ); ?></span> <span class="wwp-filter-count" data-wwp-count></span></label>
-			<?php endforeach; ?></fieldset>
+			<?php endforeach; ?><?php if ( $canvas ) : ?></div><?php endif; ?></fieldset>
 		<?php endforeach; ?>
 		<button type="button" class="btn btn-outline-secondary w-100" data-wwp-reset><?php esc_html_e( 'Reset filters', 'wp-web-projects' ); ?></button></aside>
-		<div class="col-lg-9 wwp-results"><p role="status" aria-live="polite" data-wwp-status data-format="<?php esc_attr_e( '%d projects', 'wp-web-projects' ); ?>"></p>
+		<div class="<?php echo $canvas ? 'col-12' : 'col-lg-9'; ?> wwp-results"><p role="status" aria-live="polite" data-wwp-status data-format="<?php esc_attr_e( '%d projects', 'wp-web-projects' ); ?>"></p>
 		<div class="row g-4">
 		<?php foreach ( $cards as $card ) : $post = $card['post']; ?>
-		<div class="col-md-6 col-xl-4 wwp-project" data-wwp-terms="<?php echo esc_attr( wp_json_encode( $card['ids'] ) ); ?>">
+		<div class="col-md-6 <?php echo $canvas ? 'col-xl-3' : 'col-xl-4'; ?> wwp-project" data-wwp-terms="<?php echo esc_attr( wp_json_encode( $card['ids'] ) ); ?>">
 		<article class="card h-100">
 		<?php $image_url = get_the_post_thumbnail_url( $post, 'full' ); if ( $image_url ) : ?>
 		<a class="nolightbox" href="<?php echo esc_url( $image_url ); ?>" data-wwp-image data-heading="<?php echo esc_attr( get_the_title( $post ) ); ?>" data-description="" aria-label="<?php echo esc_attr( sprintf( __( 'Preview image: %s', 'wp-web-projects' ), get_the_title( $post ) ) ); ?>"><?php echo get_the_post_thumbnail( $post, 'large', array( 'class' => 'card-img-top wwp-card-image nolightbox' ) ); ?></a>
