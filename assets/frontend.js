@@ -60,12 +60,19 @@
       image.alt = link.querySelector('img')?.alt || '';
       dialog.querySelector('[data-wwp-heading]').textContent = link.dataset.heading;
       dialog.querySelector('[data-wwp-description]').textContent = link.dataset.description;
+      const website = dialog.querySelector('[data-wwp-website]');
+      const url = link.dataset.website || '';
+      website.hidden = !url.startsWith('https://');
+      if (website.hidden) website.removeAttribute('href');
+      else website.href = url;
       dialog.querySelector('[data-wwp-position]').textContent = `${index + 1} / ${links.length}`;
     }
-    allLinks.forEach((link) => link.addEventListener('click', (event) => {
-      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    [...allLinks, ...root.querySelectorAll('[data-wwp-preview]')].forEach((trigger) => trigger.addEventListener('click', (event) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      const link = allLinks.includes(trigger) ? trigger : trigger.closest('.wwp-project')?.querySelector('[data-wwp-image]');
+      if (!link) return;
       event.preventDefault();
-      opener = link;
+      opener = trigger;
       links = visibleLinks();
       show(links.indexOf(link));
       dialog.showModal();

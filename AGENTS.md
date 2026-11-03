@@ -9,9 +9,9 @@ This repository contains a standalone WordPress portfolio plugin for SiteBuilder
 - Categories describe industries/client types; features describe capabilities. Both support multiple terms per project.
 - Use the theme's Bootstrap CSS. Do not load Bootstrap, external libraries or a second CSS framework.
 - Individual layouts belong to the theme/LiveCanvas. Provide reusable shortcodes for project data and the gallery.
-- Portfolio thumbnails open featured images in a lightbox; titles and View project buttons link to project pages. Use explicit card actions and plain excerpts without theme excerpt filters.
+- Portfolio thumbnails and titles open featured images in a lightbox; do not render View project buttons or links to individual project pages. Keep external website actions and plain excerpts without theme excerpt filters.
 - Gallery headings/descriptions are project-specific. Alt text belongs to the attachment.
-- Keep native WordPress XML sitemap eligibility. Respect site visibility and other plugins' exclusions.
+- Individual projects and project category/feature archives are noindex and excluded from XML/HTML sitemaps. Keep the normal portfolio landing Page eligible and respect site visibility and other plugins' exclusions.
 - Do not migrate old content, create redirects, activate plugins or change site content without a separate request.
 
 ## Implementation

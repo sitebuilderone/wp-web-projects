@@ -58,3 +58,32 @@
   padding-top: .5rem !important;
   padding-bottom: .5rem !important;
 }
+
+/* Theme Bootstrap container caps full-width sections without expanding narrower columns. */
+.wwp-carousel-container { width: 100%; min-width: 0; margin-inline: auto; box-sizing: border-box; }
+/* Native scrolling keeps the carousel usable with touch, keyboard or no JavaScript. */
+.wwp-carousel { --wwp-carousel-columns: 1; --wwp-carousel-gap: 1.5rem; container: wwp-carousel / inline-size; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.wwp-carousel-viewport { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.wwp-carousel-track { box-sizing: border-box; max-width: 100%; min-width: 0; display: flex; gap: var(--wwp-carousel-gap); overflow-x: auto; scroll-snap-type: x mandatory; padding: .25rem .25rem 1rem; }
+.wwp-carousel-card { flex: 0 0 calc((100% - (var(--wwp-carousel-columns) - 1) * var(--wwp-carousel-gap)) / var(--wwp-carousel-columns)); min-width: 0; scroll-snap-align: start; display: flex; flex-direction: column; }
+.wwp-carousel-image { display: block; }
+.wwp-carousel .wwp-card-image { display: block; height: auto; border-radius: 0; }
+.wwp-carousel-body { display: flex; flex-direction: column; flex: 1; padding: 1rem .25rem .25rem; }
+.wwp-carousel-excerpt { margin-bottom: 0; overflow-wrap: anywhere; }
+.wwp-carousel-controls { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .5rem; }
+.wwp-carousel-arrow { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 50%; background: var(--bs-body-bg, #fff); color: var(--bs-body-color, #212529); font: inherit; font-size: 2rem; line-height: 1; }
+.wwp-carousel-arrow:disabled { opacity: .4; }
+.wwp-carousel-arrow:not(:disabled) { cursor: pointer; }
+.wwp-carousel-arrow:focus-visible, .wwp-carousel-viewport:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+@container wwp-carousel (min-width: 600px) { .wwp-carousel-track { --wwp-carousel-columns: 2; } }
+@container wwp-carousel (min-width: 1000px) {
+  .wwp-carousel-columns-3 .wwp-carousel-track { --wwp-carousel-columns: 3; }
+  .wwp-carousel-columns-4 .wwp-carousel-track { --wwp-carousel-columns: 4; }
+}
+
+/* Swiper is supplied by the theme; these structural rules avoid theme slider selectors. */
+.wwp-carousel-viewport.wwp-swiper-active { position: relative; overflow: hidden; touch-action: pan-y; }
+.wwp-swiper-active .wwp-carousel-track { position: relative; width: 100%; gap: 0; overflow: visible; padding: 0; scroll-snap-type: none; transition-property: transform; transition-timing-function: ease; transform: translate3d(0, 0, 0); box-sizing: content-box; }
+.wwp-swiper-active .wwp-carousel-card { flex: 0 0 auto; height: auto; scroll-snap-align: none; transition-property: transform; }
+
+.wwp-swiper-active .swiper-notification { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

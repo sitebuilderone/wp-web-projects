@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Web Projects
  * Description: Website portfolio projects, categories, features, filterable Bootstrap cards and image galleries.
- * Version: 1.0.5
+ * Version: 1.0.12
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: SiteBuilderOne
@@ -27,9 +27,22 @@ final class WWP_Plugin {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'front_assets' ) );
 		add_shortcode( 'wwp_portfolio', array( __CLASS__, 'portfolio' ) );
 		add_shortcode( 'wwp_portfolio_canvas', array( __CLASS__, 'portfolio_canvas' ) );
+		add_shortcode( 'wwp_portfolio_carousel', array( __CLASS__, 'portfolio_carousel' ) );
 		add_shortcode( 'wwp_gallery', array( __CLASS__, 'gallery' ) );
 		add_shortcode( 'wwp_project_logo', array( __CLASS__, 'logo' ) );
 		add_shortcode( 'wwp_project_link', array( __CLASS__, 'link' ) );
+		add_filter( 'wp_robots', array( __CLASS__, 'noindex_robots' ), PHP_INT_MAX );
+		add_action( 'template_redirect', array( __CLASS__, 'noindex_header' ) );
+		add_filter( 'wp_sitemaps_post_types', array( __CLASS__, 'exclude_sitemap_types' ) );
+		add_filter( 'wp_sitemaps_taxonomies', array( __CLASS__, 'exclude_sitemap_types' ) );
+		foreach ( array( 'wpseo_sitemap_exclude_post_type', 'wpseo_sitemap_exclude_taxonomy', 'rank_math/sitemap/exclude_post_type', 'rank_math/sitemap/exclude_taxonomy' ) as $hook ) {
+			add_filter( $hook, array( __CLASS__, 'exclude_seo_sitemap_type' ), 10, 2 );
+		}
+		// WP Sitemap Page reads these exclusions at render time; do not change saved settings.
+		foreach ( array( 'wsp_exclude_cpt_' . self::TYPE, 'wsp_exclude_taxonomy_' . self::CATEGORY, 'wsp_exclude_taxonomy_' . self::FEATURE ) as $option ) {
+			add_filter( 'pre_option_' . $option, array( __CLASS__, 'exclude_html_sitemap_type' ) );
+		}
+		add_filter( 'pre_do_shortcode_tag', array( __CLASS__, 'exclude_explicit_html_sitemap' ), 10, 3 );
 	}
 
 	public static function register() {
@@ -49,6 +62,31 @@ final class WWP_Plugin {
 		}
 	}
 
+	private static function is_project_url() {
+		return is_singular( self::TYPE ) || is_tax( array( self::CATEGORY, self::FEATURE ) );
+	}
+	public static function noindex_robots( $robots ) {
+		if ( self::is_project_url() ) {
+			unset( $robots['index'] );
+			$robots['noindex'] = true;
+		}
+		return $robots;
+	}
+	public static function noindex_header() {
+		// Also works when an SEO plugin replaces WordPress's robots meta tag.
+		if ( self::is_project_url() && ! headers_sent() ) { header( 'X-Robots-Tag: noindex', false ); }
+	}
+	public static function exclude_sitemap_types( $types ) {
+		unset( $types[ self::TYPE ], $types[ self::CATEGORY ], $types[ self::FEATURE ] );
+		return $types;
+	}
+	public static function exclude_seo_sitemap_type( $excluded, $type ) {
+		return in_array( $type, array( self::TYPE, self::CATEGORY, self::FEATURE ), true ) ? true : $excluded;
+	}
+	public static function exclude_html_sitemap_type( $value ) { return '1'; }
+	public static function exclude_explicit_html_sitemap( $result, $tag, $atts ) {
+		return 'wp_sitemap_page' === $tag && is_array( $atts ) && in_array( $atts['only'] ?? '', array( self::TYPE, self::CATEGORY, self::FEATURE ), true ) ? '' : $result;
+	}
 	public static function classic_editor( $enabled, $type ) { return self::TYPE === $type ? false : $enabled; }
 	public static function activate() { self::register(); flush_rewrite_rules(); }
 	public static function deactivate() {
@@ -117,12 +155,22 @@ final class WWP_Plugin {
 	public static function admin_assets() {
 		$screen = get_current_screen();
 		if ( ! $screen || self::TYPE !== $screen->post_type || 'post' !== $screen->base ) { return; }
-		wp_enqueue_media(); wp_enqueue_script( 'wwp-admin', plugins_url( 'assets/admin.js', __FILE__ ), array( 'jquery', 'media-views' ), '1.0.5', true );
-		wp_enqueue_style( 'wwp-admin', plugins_url( 'assets/admin.css', __FILE__ ), array(), '1.0.5' );
+		wp_enqueue_media(); wp_enqueue_script( 'wwp-admin', plugins_url( 'assets/admin.js', __FILE__ ), array( 'jquery', 'media-views' ), '1.0.12', true );
+		wp_enqueue_style( 'wwp-admin', plugins_url( 'assets/admin.css', __FILE__ ), array(), '1.0.12' );
 	}
 	public static function front_assets() {
-		wp_enqueue_style( 'wwp-frontend', plugins_url( 'assets/frontend.css', __FILE__ ), array(), '1.0.5' );
-		wp_register_script( 'wwp-frontend', plugins_url( 'assets/frontend.js', __FILE__ ), array(), '1.0.5', true );
+		wp_enqueue_style( 'wwp-frontend', plugins_url( 'assets/frontend.css', __FILE__ ), array(), '1.0.12' );
+		wp_register_script( 'wwp-frontend', plugins_url( 'assets/frontend.js', __FILE__ ), array(), '1.0.12', true );
+		$dependencies = array( 'wwp-frontend' );
+		// Use the active theme's existing Canvas bundle; never fetch another copy.
+		$swiper_path = get_theme_file_path( 'js/canvas/plugins.swiper.js' );
+		$swiper_css = get_theme_file_path( 'css/canvas/swiper.css' );
+		if ( is_readable( $swiper_path ) && is_readable( $swiper_css ) ) {
+			wp_register_script( 'wwp-theme-swiper', get_theme_file_uri( 'js/canvas/plugins.swiper.js' ), array(), (string) filemtime( $swiper_path ), true );
+			wp_register_style( 'wwp-theme-swiper', get_theme_file_uri( 'css/canvas/swiper.css' ), array(), (string) filemtime( $swiper_css ) );
+			$dependencies[] = 'wwp-theme-swiper';
+		}
+		wp_register_script( 'wwp-carousel', plugins_url( 'assets/carousel.js', __FILE__ ), $dependencies, '1.0.12', true );
 	}
 	private static function project_id( $atts ) {
 		$id = ! empty( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
@@ -146,11 +194,15 @@ final class WWP_Plugin {
 		$text = wp_strip_all_tags( strip_shortcodes( '' !== $manual ? $manual : $post->post_content ), true );
 		return '' !== $manual ? $text : wp_trim_words( $text, 55, '…' );
 	}
+	private static function preview_title( $post, $image_url ) {
+		$title = esc_html( get_the_title( $post ) );
+		return $image_url ? '<a class="nolightbox" href="' . esc_url( $image_url ) . '" data-wwp-preview>' . $title . '</a>' : $title;
+	}
 	private static function lightbox() {
 		?>
 		<dialog class="wwp-lightbox" aria-label="<?php esc_attr_e( 'Project image gallery', 'wp-web-projects' ); ?>">
 		<div class="wwp-lightbox-controls"><button type="button" class="btn btn-light" data-wwp-prev><?php esc_html_e( 'Previous image', 'wp-web-projects' ); ?></button><button type="button" class="btn btn-light" data-wwp-next><?php esc_html_e( 'Next image', 'wp-web-projects' ); ?></button><button type="button" class="btn btn-light" data-wwp-close autofocus><?php esc_html_e( 'Close', 'wp-web-projects' ); ?></button></div>
-		<figure><img class="wwp-lightbox-image nolightbox" alt=""><figcaption aria-live="polite"><h3 class="h5" data-wwp-heading></h3><p class="wwp-description" data-wwp-description></p><span data-wwp-position></span></figcaption></figure></dialog>
+		<figure><img class="wwp-lightbox-image nolightbox" alt=""><figcaption aria-live="polite"><h3 class="h5" data-wwp-heading></h3><p class="wwp-description" data-wwp-description></p><p><a class="wwp-project-link btn btn-outline-secondary" data-wwp-website target="_blank" rel="noopener noreferrer" hidden><?php esc_html_e( 'Visit website', 'wp-web-projects' ); ?></a></p><span data-wwp-position></span></figcaption></figure></dialog>
 		<?php
 	}
 	public static function portfolio( $atts ) {
@@ -193,14 +245,43 @@ final class WWP_Plugin {
 		<div class="col-md-6 <?php echo $canvas ? 'col-xl-3' : 'col-xl-4'; ?> wwp-project" data-wwp-terms="<?php echo esc_attr( wp_json_encode( $card['ids'] ) ); ?>">
 		<article class="card h-100">
 		<?php $image_url = get_the_post_thumbnail_url( $post, 'full' ); if ( $image_url ) : ?>
-		<a class="nolightbox" href="<?php echo esc_url( $image_url ); ?>" data-wwp-image data-heading="<?php echo esc_attr( get_the_title( $post ) ); ?>" data-description="" aria-label="<?php echo esc_attr( sprintf( __( 'Preview image: %s', 'wp-web-projects' ), get_the_title( $post ) ) ); ?>"><?php echo get_the_post_thumbnail( $post, 'large', array( 'class' => 'card-img-top wwp-card-image nolightbox' ) ); ?></a>
+		<a class="nolightbox" href="<?php echo esc_url( $image_url ); ?>" data-wwp-image data-heading="<?php echo esc_attr( get_the_title( $post ) ); ?>" data-description="<?php echo esc_attr( self::card_excerpt( $post ) ); ?>" data-website="<?php echo esc_url( self::https_url( get_post_meta( $post->ID, '_wwp_url', true ) ) ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Preview image: %s', 'wp-web-projects' ), get_the_title( $post ) ) ); ?>"><?php echo get_the_post_thumbnail( $post, 'large', array( 'class' => 'card-img-top wwp-card-image nolightbox' ) ); ?></a>
 		<?php endif; ?>
-		<div class="card-body d-flex flex-column"><h2 class="h5 card-title"><a href="<?php echo esc_url( get_permalink( $post ) ); ?>"><?php echo esc_html( get_the_title( $post ) ); ?></a></h2><p class="card-text"><?php echo esc_html( self::card_excerpt( $post ) ); ?></p>
-		<div class="wwp-card-actions mt-auto d-flex flex-wrap gap-2"><a class="btn btn-outline-secondary" href="<?php echo esc_url( get_permalink( $post ) ); ?>"><?php esc_html_e( 'View project', 'wp-web-projects' ); ?></a><?php echo self::link( array( 'id' => $post->ID ) ); ?></div>
+		<div class="card-body d-flex flex-column"><h2 class="h5 card-title"><?php echo self::preview_title( $post, $image_url ); ?></h2><p class="card-text"><?php echo esc_html( self::card_excerpt( $post ) ); ?></p>
+		<div class="wwp-card-actions mt-auto d-flex flex-wrap gap-2"><?php echo self::link( array( 'id' => $post->ID ) ); ?></div>
 		</div></article></div>
 		<?php endforeach; ?></div>
 		<p data-wwp-empty <?php echo $posts ? 'hidden' : ''; ?>><?php esc_html_e( 'No projects match these filters.', 'wp-web-projects' ); ?></p>
 		</div></div><?php self::lightbox(); ?></div>
+		<?php return ob_get_clean();
+	}
+	public static function portfolio_carousel( $atts ) {
+		$atts = shortcode_atts( array( 'limit' => 12, 'columns' => 4 ), $atts, 'wwp_portfolio_carousel' );
+		$limit = (int) $atts['limit'];
+		$limit = -1 === $limit ? -1 : max( 1, min( 100, $limit ) );
+		$columns = max( 2, min( 4, (int) $atts['columns'] ) );
+		$posts = get_posts( array( 'post_type' => self::TYPE, 'post_status' => 'publish', 'has_password' => false, 'posts_per_page' => $limit, 'orderby' => array( 'menu_order' => 'ASC', 'title' => 'ASC' ), 'no_found_rows' => true ) );
+		if ( ! $posts ) { return ''; }
+		wp_enqueue_script( 'wwp-carousel' );
+		if ( wp_style_is( 'wwp-theme-swiper', 'registered' ) && ! wp_style_is( 'pico-one-c-canvas-swiper', 'enqueued' ) ) { wp_enqueue_style( 'wwp-theme-swiper' ); }
+		$track_id = wp_unique_id( 'wwp-carousel-' );
+		ob_start(); ?>
+		<div class="wwp-carousel-container container"><div role="region" class="wwp-carousel wwp-gallery wwp-carousel-columns-<?php echo esc_attr( $columns ); ?>" data-wwp-carousel data-wwp-columns="<?php echo esc_attr( $columns ); ?>" data-wwp-gallery aria-roledescription="<?php esc_attr_e( 'carousel', 'wp-web-projects' ); ?>" aria-label="<?php esc_attr_e( 'Website portfolio', 'wp-web-projects' ); ?>">
+		<div class="wwp-carousel-viewport" data-wwp-viewport tabindex="0" aria-label="<?php esc_attr_e( 'Projects: scroll to browse', 'wp-web-projects' ); ?>"><div class="wwp-carousel-track" id="<?php echo esc_attr( $track_id ); ?>" data-wwp-track>
+		<?php foreach ( $posts as $post ) :
+			$image_url = get_the_post_thumbnail_url( $post, 'full' ); ?>
+		<article class="wwp-project wwp-carousel-card">
+		<?php if ( $image_url ) : ?>
+		<a class="wwp-carousel-image nolightbox" href="<?php echo esc_url( $image_url ); ?>" data-wwp-image data-heading="<?php echo esc_attr( get_the_title( $post ) ); ?>" data-description="<?php echo esc_attr( self::card_excerpt( $post ) ); ?>" data-website="<?php echo esc_url( self::https_url( get_post_meta( $post->ID, '_wwp_url', true ) ) ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Preview image: %s', 'wp-web-projects' ), get_the_title( $post ) ) ); ?>"><?php echo get_the_post_thumbnail( $post, 'large', array( 'class' => 'wwp-card-image nolightbox' ) ); ?></a>
+		<?php endif; ?>
+		<div class="wwp-carousel-body"><h3 class="h5 card-title"><?php echo self::preview_title( $post, $image_url ); ?></h3>
+		<p class="wwp-carousel-excerpt"><?php echo esc_html( self::card_excerpt( $post ) ); ?></p></div>
+		</article>
+		<?php endforeach; ?></div></div>
+		<div class="wwp-carousel-controls" data-wwp-carousel-controls hidden>
+		<button type="button" class="wwp-carousel-arrow" data-wwp-carousel-prev aria-controls="<?php echo esc_attr( $track_id ); ?>" aria-label="<?php esc_attr_e( 'Previous projects', 'wp-web-projects' ); ?>"><span aria-hidden="true">&#8249;</span></button>
+		<button type="button" class="wwp-carousel-arrow" data-wwp-carousel-next aria-controls="<?php echo esc_attr( $track_id ); ?>" aria-label="<?php esc_attr_e( 'Next projects', 'wp-web-projects' ); ?>"><span aria-hidden="true">&#8250;</span></button>
+		</div><?php self::lightbox(); ?></div></div>
 		<?php return ob_get_clean();
 	}
 	public static function gallery( $atts ) {
