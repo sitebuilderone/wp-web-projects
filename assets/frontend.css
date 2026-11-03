@@ -13,6 +13,8 @@
 .wwp-lightbox-controls { display: flex; gap: .5rem; justify-content: flex-end; flex-wrap: wrap; margin-bottom: 1rem; }
 .wwp-lightbox-image { display: block; max-width: 100%; max-height: 65vh; width: auto; height: auto; margin: 0 auto 1rem; }
 /* Canvas-style variant: compact filter toolbar, theme colours, open cards. */
+.wwp-portfolio-canvas .wwp-project-grid { position: relative; }
+.wwp-portfolio-canvas .wwp-filter-ghost { z-index: 1; user-select: none; }
 .wwp-portfolio-canvas .wwp-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem 1.25rem; }
 .wwp-portfolio-canvas .wwp-filters fieldset { min-width: 0; max-width: 100%; margin: 0 !important; }
 .wwp-portfolio-canvas .wwp-filters legend { float: none; width: auto; margin: 0 0 .375rem; font-size: .875rem; line-height: 1.25; }

@@ -4,8 +4,31 @@
     const cards = [...root.querySelectorAll('.wwp-project')].map((element) => ({ element, terms: JSON.parse(element.dataset.wwpTerms) }));
     const inputs = [...root.querySelectorAll('input[data-taxonomy]')];
     const allButtons = [...root.querySelectorAll('[data-wwp-all]')];
+    const grid = root.querySelector('.wwp-project-grid');
+    const animations = new Set();
+    const ghosts = new Set();
+    const clearMotion = () => {
+      animations.forEach((animation) => animation.cancel());
+      animations.clear();
+      ghosts.forEach((ghost) => ghost.remove());
+      ghosts.clear();
+    };
+    const play = (element, frames, done) => {
+      const animation = element.animate(frames, { duration: 650, easing: 'ease', fill: 'both' });
+      animations.add(animation);
+      animation.onfinish = () => {
+        animation.cancel();
+        animations.delete(animation);
+        if (done) done();
+      };
+    };
     const matches = (card, selections, ignore) => Object.entries(selections).every(([taxonomy, ids]) => taxonomy === ignore || ids.length === 0 || ids.some((id) => card.terms[taxonomy].includes(id)));
-    function update() {
+    function update(animate = true) {
+      const motion = animate && grid && typeof cards[0]?.element.animate === 'function' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // Measure the current visual positions before cancelling an interrupted transition.
+      const before = new Map();
+      if (motion) cards.forEach(({ element }) => { if (!element.hidden) before.set(element, element.getBoundingClientRect()); });
+      clearMotion();
       const selections = {};
       inputs.forEach((input) => {
         const ids = selections[input.dataset.taxonomy] ||= [];
@@ -29,6 +52,36 @@
       const status = root.querySelector('[data-wwp-status]');
       status.textContent = status.dataset.format.replace('%d', total);
       root.querySelector('[data-wwp-empty]').hidden = total !== 0;
+      if (motion) {
+        const bounds = grid.getBoundingClientRect();
+        cards.forEach(({ element }) => {
+          const previous = before.get(element);
+          if (element.hidden) {
+            if (!previous) return;
+            // Decorative exit copies leave the real cards hidden immediately, so
+            // keyboard focus and lightbox navigation use the new results at once.
+            const ghost = element.cloneNode(true);
+            ghost.hidden = false;
+            ghost.inert = true;
+            ghost.setAttribute('aria-hidden', 'true');
+            ghost.removeAttribute('id');
+            ghost.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
+            ghost.classList.add('wwp-filter-ghost');
+            Object.assign(ghost.style, { position: 'absolute', left: `${previous.left - bounds.left}px`, top: `${previous.top - bounds.top}px`, width: `${previous.width}px`, height: `${previous.height}px`, margin: '0', pointerEvents: 'none' });
+            grid.append(ghost);
+            ghosts.add(ghost);
+            play(ghost, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.001)' }], () => { ghost.remove(); ghosts.delete(ghost); });
+          } else {
+            const next = element.getBoundingClientRect();
+            if (previous) {
+              const x = previous.left - next.left, y = previous.top - next.top;
+              if (x || y) play(element, [{ transform: `translate(${x}px, ${y}px)` }, { transform: 'translate(0, 0)' }]);
+            } else {
+              play(element, [{ opacity: 0, transform: 'scale(.001)' }, { opacity: 1, transform: 'scale(1)' }]);
+            }
+          }
+        });
+      }
     }
     root.querySelector('.wwp-filters').hidden = false;
     root.querySelector('.wwp-results').classList.add('wwp-filtered-results');
@@ -41,7 +94,8 @@
       inputs.forEach((input) => { input.checked = false; });
       update();
     });
-    update();
+    update(false);
+    if (grid) window.addEventListener('resize', clearMotion);
   });
 
   document.querySelectorAll('[data-wwp-gallery]').forEach((root) => {

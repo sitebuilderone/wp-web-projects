@@ -164,3 +164,53 @@ titleTrigger.listeners.click({ preventDefault() {} });
 assert.equal(position.textContent, '2 / 2', 'Title triggers never duplicate popup images');
 close.listeners.click();
 console.log('PASS: project title popup, correct image sequence and title focus return');
+
+// Animated Canvas filtering must keep logical visibility immediate and clean up
+// decorative exit copies on completion, rapid changes, resize and reduced motion.
+const animated = portfolio(), plain = portfolio();
+const ghostNodes = new Set(), played = [];
+let reduceMotion = false, resizeMotion;
+const motionGrid = { getBoundingClientRect: () => ({ left: 0, top: 0 }), append(node) { ghostNodes.add(node); } };
+const originalQuery = animated.querySelector;
+animated.querySelector = (selector) => selector === '.wwp-project-grid' ? motionGrid : originalQuery(selector);
+const animateNode = (node, frames, options) => {
+  const animation = { cancelled: false, cancel() { this.cancelled = true; } };
+  played.push({ node, frames, options, animation });
+  return animation;
+};
+animated.cards.forEach((card) => {
+  card.getBoundingClientRect = () => ({ left: animated.cards.filter(c => !c.hidden).indexOf(card) * 200, top: 0, width: 200, height: 300 });
+  card.animate = (frames, options) => animateNode(card, frames, options);
+  card.cloneNode = () => {
+    const ghost = { style: {}, classList: { add() {} }, setAttribute() {}, removeAttribute() {}, querySelectorAll: () => [], remove() { ghostNodes.delete(ghost); } };
+    ghost.animate = (frames, options) => animateNode(ghost, frames, options);
+    return ghost;
+  };
+});
+vm.runInNewContext(fs.readFileSync('assets/frontend.js', 'utf8'), {
+  document: { querySelectorAll: (selector) => selector === '[data-wwp-portfolio]' ? [animated, plain] : [] },
+  window: { matchMedia: () => ({ matches: reduceMotion }), addEventListener(name, fn) { if (name === 'resize') resizeMotion = fn; } }
+});
+assert.equal(played.length, 0, 'Initial render does not animate');
+animated.inputs[1].checked = true; animated.inputs[1].listeners.change();
+assert.equal(animated.cards[0].hidden, true, 'Departing card hidden immediately for focus and lightbox');
+assert.equal(ghostNodes.size, 1, 'Decorative copy animates the departure');
+assert([...ghostNodes][0].inert, 'Exit copy cannot receive focus');
+assert(played.some(p => p.node === animated.cards[1] && p.frames[0].transform === 'translate(200px, 0px)'), 'Remaining cards glide from previous positions');
+assert(played.every(p => p.options.duration === 650));
+animated.reset.listeners.click();
+assert.equal(ghostNodes.size, 0, 'Rapid reset removes prior exit copies');
+assert(played.some(p => p.node === animated.cards[0] && p.frames[0].opacity === 0), 'Returning cards fade and grow');
+assert.equal(plain.status.textContent, '3 projects', 'Original portfolio unaffected');
+resizeMotion();
+assert(played.every(p => p.animation.cancelled), 'Resize clears all active effects');
+animated.inputs[0].checked = true; animated.inputs[0].listeners.change();
+assert.equal(ghostNodes.size, 1);
+played.filter(p => !p.animation.cancelled).forEach(p => p.animation.onfinish());
+assert.equal(ghostNodes.size, 0, 'Finished effects clean up exit copies');
+reduceMotion = true;
+const priorEffects = played.length;
+animated.reset.listeners.click();
+assert.equal(played.length, priorEffects, 'Reduced motion filters instantly');
+assert(animated.cards.every(c => !c.hidden));
+console.log('PASS: Canvas movement, entry/exit, immediate visibility, rapid reset, resize, cleanup, reduced motion and original isolation');

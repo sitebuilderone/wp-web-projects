@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Web Projects
  * Description: Website portfolio projects, categories, features, filterable Bootstrap cards and image galleries.
- * Version: 1.0.12
+ * Version: 1.0.13
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: SiteBuilderOne
@@ -155,12 +155,12 @@ final class WWP_Plugin {
 	public static function admin_assets() {
 		$screen = get_current_screen();
 		if ( ! $screen || self::TYPE !== $screen->post_type || 'post' !== $screen->base ) { return; }
-		wp_enqueue_media(); wp_enqueue_script( 'wwp-admin', plugins_url( 'assets/admin.js', __FILE__ ), array( 'jquery', 'media-views' ), '1.0.12', true );
-		wp_enqueue_style( 'wwp-admin', plugins_url( 'assets/admin.css', __FILE__ ), array(), '1.0.12' );
+		wp_enqueue_media(); wp_enqueue_script( 'wwp-admin', plugins_url( 'assets/admin.js', __FILE__ ), array( 'jquery', 'media-views' ), '1.0.13', true );
+		wp_enqueue_style( 'wwp-admin', plugins_url( 'assets/admin.css', __FILE__ ), array(), '1.0.13' );
 	}
 	public static function front_assets() {
-		wp_enqueue_style( 'wwp-frontend', plugins_url( 'assets/frontend.css', __FILE__ ), array(), '1.0.12' );
-		wp_register_script( 'wwp-frontend', plugins_url( 'assets/frontend.js', __FILE__ ), array(), '1.0.12', true );
+		wp_enqueue_style( 'wwp-frontend', plugins_url( 'assets/frontend.css', __FILE__ ), array(), '1.0.13' );
+		wp_register_script( 'wwp-frontend', plugins_url( 'assets/frontend.js', __FILE__ ), array(), '1.0.13', true );
 		$dependencies = array( 'wwp-frontend' );
 		// Use the active theme's existing Canvas bundle; never fetch another copy.
 		$swiper_path = get_theme_file_path( 'js/canvas/plugins.swiper.js' );
@@ -170,7 +170,7 @@ final class WWP_Plugin {
 			wp_register_style( 'wwp-theme-swiper', get_theme_file_uri( 'css/canvas/swiper.css' ), array(), (string) filemtime( $swiper_css ) );
 			$dependencies[] = 'wwp-theme-swiper';
 		}
-		wp_register_script( 'wwp-carousel', plugins_url( 'assets/carousel.js', __FILE__ ), $dependencies, '1.0.12', true );
+		wp_register_script( 'wwp-carousel', plugins_url( 'assets/carousel.js', __FILE__ ), $dependencies, '1.0.13', true );
 	}
 	private static function project_id( $atts ) {
 		$id = ! empty( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
@@ -240,7 +240,7 @@ final class WWP_Plugin {
 		<?php endforeach; ?>
 		<button type="button" class="btn btn-outline-secondary w-100" data-wwp-reset><?php esc_html_e( 'Reset filters', 'wp-web-projects' ); ?></button></aside>
 		<div class="<?php echo $canvas ? 'col-12' : 'col-lg-9'; ?> wwp-results"><p role="status" aria-live="polite" data-wwp-status data-format="<?php esc_attr_e( '%d projects', 'wp-web-projects' ); ?>"></p>
-		<div class="row g-4">
+		<div class="row g-4<?php echo $canvas ? ' wwp-project-grid' : ''; ?>">
 		<?php foreach ( $cards as $card ) : $post = $card['post']; ?>
 		<div class="col-md-6 <?php echo $canvas ? 'col-xl-3' : 'col-xl-4'; ?> wwp-project" data-wwp-terms="<?php echo esc_attr( wp_json_encode( $card['ids'] ) ); ?>">
 		<article class="card h-100">
