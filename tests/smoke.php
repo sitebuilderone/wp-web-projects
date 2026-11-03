@@ -96,7 +96,8 @@ check( false !== strpos( $html, 'href="https://example.test/featured-full.jpg" d
 check( false === strpos( $html, 'https://example.test/website-portfolio/project/' ), 'No project detail links in grid' );
 check( false === strpos( $html, '>View project</a>' ), 'No View project button in grid' );
 check( false !== strpos( $html, 'data-wwp-preview>Fixture project</a>' ), 'Project titles trigger image preview' );
-check( false !== strpos( $html, 'href="https://client.example.test/" target="_blank"' ), 'External website button destination' );
+check( false === strpos( $html, 'class="wwp-card-actions' ), 'Portfolio cards omit website buttons' );
+check( false !== strpos( $html, 'data-website="https://client.example.test/"' ), 'Portfolio popup retains website URL' );
 check( false !== strpos( $html, '<dialog class="wwp-lightbox"' ), 'Portfolio includes lightbox' );
 check( $GLOBALS['post'] === $outer_post, 'Preserve surrounding LiveCanvas post context' );
 $GLOBALS['fixture_project']->post_excerpt = '';
