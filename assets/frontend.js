@@ -107,19 +107,49 @@
     let index = 0;
     let opener;
     const image = dialog.querySelector('img');
+    const title = dialog.querySelector('[data-wwp-title]');
+    const captionTitle = dialog.querySelector('[data-wwp-caption-title]');
+    const heading = dialog.querySelector('[data-wwp-heading]');
+    const slideControls = dialog.querySelector('.wwp-slide-controls');
+    let slides = [];
+    let slideIndex = 0;
+    function showSlide(next) {
+      slideIndex = (next + slides.length) % slides.length;
+      const slide = slides[slideIndex];
+      image.src = slide.url;
+      image.alt = slide.alt;
+      heading.textContent = slide.heading;
+      heading.hidden = !slide.heading || (slideIndex === 0 && title && !title.hidden);
+      dialog.querySelector('[data-wwp-description]').textContent = slide.description;
+      if (slideControls) {
+        dialog.querySelector('[data-wwp-slide-position]').textContent = `${slideIndex + 1} / ${slides.length}`;
+      }
+    }
     function show(next) {
       index = (next + links.length) % links.length;
       const link = links[index];
-      image.src = link.href;
-      image.alt = link.querySelector('img')?.alt || '';
-      dialog.querySelector('[data-wwp-heading]').textContent = link.dataset.heading;
-      dialog.querySelector('[data-wwp-description]').textContent = link.dataset.description;
+      if (title) {
+        const projectTitle = link.dataset.wwpSlides === undefined ? '' : link.dataset.heading;
+        title.textContent = projectTitle;
+        title.hidden = !projectTitle;
+        if (captionTitle) {
+          captionTitle.textContent = projectTitle;
+          captionTitle.hidden = !projectTitle;
+        }
+      }
+      slides = [{
+        url: link.href,
+        alt: link.querySelector('img')?.alt || '',
+        heading: link.dataset.heading,
+        description: link.dataset.description,
+      }, ...JSON.parse(link.dataset.wwpSlides || '[]')];
+      if (slideControls) slideControls.hidden = slides.length < 2;
+      showSlide(0);
       const website = dialog.querySelector('[data-wwp-website]');
       const url = link.dataset.website || '';
       website.hidden = !url.startsWith('https://');
       if (website.hidden) website.removeAttribute('href');
       else website.href = url;
-      dialog.querySelector('[data-wwp-position]').textContent = `${index + 1} / ${links.length}`;
     }
     [...allLinks, ...root.querySelectorAll('[data-wwp-preview]')].forEach((trigger) => trigger.addEventListener('click', (event) => {
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -133,11 +163,15 @@
     }));
     dialog.querySelector('[data-wwp-prev]').addEventListener('click', () => show(index - 1));
     dialog.querySelector('[data-wwp-next]').addEventListener('click', () => show(index + 1));
+    dialog.querySelector('[data-wwp-slide-prev]')?.addEventListener('click', () => showSlide(slideIndex - 1));
+    dialog.querySelector('[data-wwp-slide-next]')?.addEventListener('click', () => showSlide(slideIndex + 1));
     dialog.querySelector('[data-wwp-close]').addEventListener('click', () => dialog.close());
     dialog.addEventListener('keydown', (event) => {
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
         event.preventDefault();
-        show(index + (event.key === 'ArrowLeft' ? -1 : 1));
+        const direction = event.key === 'ArrowLeft' ? -1 : 1;
+        if (slideControls?.contains(event.target)) showSlide(slideIndex + direction);
+        else show(index + direction);
       }
     });
     dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });

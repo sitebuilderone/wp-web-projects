@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Web Projects
  * Description: Website portfolio projects, categories, features, filterable Bootstrap cards and image galleries.
- * Version: 1.0.15
+ * Version: 1.0.21
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: SiteBuilderOne
@@ -155,12 +155,12 @@ final class WWP_Plugin {
 	public static function admin_assets() {
 		$screen = get_current_screen();
 		if ( ! $screen || self::TYPE !== $screen->post_type || 'post' !== $screen->base ) { return; }
-		wp_enqueue_media(); wp_enqueue_script( 'wwp-admin', plugins_url( 'assets/admin.js', __FILE__ ), array( 'jquery', 'media-views' ), '1.0.15', true );
-		wp_enqueue_style( 'wwp-admin', plugins_url( 'assets/admin.css', __FILE__ ), array(), '1.0.15' );
+		wp_enqueue_media(); wp_enqueue_script( 'wwp-admin', plugins_url( 'assets/admin.js', __FILE__ ), array( 'jquery', 'media-views' ), '1.0.16', true );
+		wp_enqueue_style( 'wwp-admin', plugins_url( 'assets/admin.css', __FILE__ ), array(), '1.0.16' );
 	}
 	public static function front_assets() {
-		wp_enqueue_style( 'wwp-frontend', plugins_url( 'assets/frontend.css', __FILE__ ), array(), '1.0.15' );
-		wp_register_script( 'wwp-frontend', plugins_url( 'assets/frontend.js', __FILE__ ), array(), '1.0.15', true );
+		wp_enqueue_style( 'wwp-frontend', plugins_url( 'assets/frontend.css', __FILE__ ), array(), '1.0.21' );
+		wp_register_script( 'wwp-frontend', plugins_url( 'assets/frontend.js', __FILE__ ), array(), '1.0.21', true );
 		$dependencies = array( 'wwp-frontend' );
 		// Use the active theme's existing Canvas bundle; never fetch another copy.
 		$swiper_path = get_theme_file_path( 'js/canvas/plugins.swiper.js' );
@@ -170,7 +170,7 @@ final class WWP_Plugin {
 			wp_register_style( 'wwp-theme-swiper', get_theme_file_uri( 'css/canvas/swiper.css' ), array(), (string) filemtime( $swiper_css ) );
 			$dependencies[] = 'wwp-theme-swiper';
 		}
-		wp_register_script( 'wwp-carousel', plugins_url( 'assets/carousel.js', __FILE__ ), $dependencies, '1.0.15', true );
+		wp_register_script( 'wwp-carousel', plugins_url( 'assets/carousel.js', __FILE__ ), $dependencies, '1.0.16', true );
 	}
 	private static function project_id( $atts ) {
 		$id = ! empty( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
@@ -198,11 +198,37 @@ final class WWP_Plugin {
 		$title = esc_html( get_the_title( $post ) );
 		return $image_url ? '<a class="nolightbox" href="' . esc_url( $image_url ) . '" data-wwp-preview>' . $title . '</a>' : $title;
 	}
+	private static function preview_gallery( $id ) {
+		$images = array();
+		foreach ( self::clean_gallery( get_post_meta( $id, '_wwp_gallery', true ) ) as $row ) {
+			$url = esc_url_raw( wp_get_attachment_image_url( $row['id'], 'full' ) );
+			if ( ! $url ) { continue; }
+			$images[] = array(
+				'url' => $url,
+				'alt' => trim( wp_strip_all_tags( get_post_meta( $row['id'], '_wp_attachment_image_alt', true ) ) ),
+				'heading' => $row['heading'],
+				'description' => $row['description'],
+			);
+		}
+		return $images ? wp_json_encode( $images ) : '';
+	}
 	private static function lightbox() {
 		?>
 		<dialog class="wwp-lightbox" aria-label="<?php esc_attr_e( 'Project image gallery', 'wp-web-projects' ); ?>">
-		<div class="wwp-lightbox-controls"><button type="button" class="btn btn-light" data-wwp-prev><?php esc_html_e( 'Previous Website', 'wp-web-projects' ); ?></button><button type="button" class="btn btn-light" data-wwp-next><?php esc_html_e( 'Next Website', 'wp-web-projects' ); ?></button><a class="wwp-project-link btn btn-outline-secondary" data-wwp-website target="_blank" rel="noopener noreferrer" hidden><?php esc_html_e( 'Visit Website', 'wp-web-projects' ); ?></a><button type="button" class="btn btn-light" data-wwp-close aria-label="<?php esc_attr_e( 'Close', 'wp-web-projects' ); ?>" autofocus><span aria-hidden="true">X</span></button></div>
-		<figure><img class="wwp-lightbox-image nolightbox" alt=""><figcaption aria-live="polite"><h3 class="h5" data-wwp-heading></h3><p class="wwp-description" data-wwp-description></p><span data-wwp-position></span></figcaption></figure></dialog>
+		<header class="wwp-lightbox-header">
+		<h2 class="h5 wwp-lightbox-title" data-wwp-title aria-live="polite" hidden></h2>
+		<div class="wwp-lightbox-controls"><button type="button" class="btn btn-light" data-wwp-prev><?php esc_html_e( 'Previous Website', 'wp-web-projects' ); ?></button><button type="button" class="btn btn-light" data-wwp-next><?php esc_html_e( 'Next Website', 'wp-web-projects' ); ?></button><button type="button" class="btn btn-light" data-wwp-close aria-label="<?php esc_attr_e( 'Close', 'wp-web-projects' ); ?>" autofocus><span aria-hidden="true">X</span></button></div>
+		</header>
+		<figure><img class="wwp-lightbox-image nolightbox" alt="">
+		<figcaption>
+		<div class="wwp-slide-controls" role="group" aria-label="<?php esc_attr_e( 'Images in this project', 'wp-web-projects' ); ?>" hidden>
+			<button type="button" class="btn btn-light" data-wwp-slide-prev><?php esc_html_e( 'Previous Image', 'wp-web-projects' ); ?></button>
+			<span data-wwp-slide-position role="status"></span>
+			<button type="button" class="btn btn-light" data-wwp-slide-next><?php esc_html_e( 'Next Image', 'wp-web-projects' ); ?></button>
+		</div>
+		<p class="h5" data-wwp-caption-title hidden></p>
+		<div aria-live="polite"><h3 class="h6" data-wwp-heading></h3><p class="wwp-description" data-wwp-description></p><a data-wwp-website target="_blank" rel="noopener noreferrer" hidden><?php esc_html_e( 'Visit Website', 'wp-web-projects' ); ?></a></div>
+		</figcaption></figure></dialog>
 		<?php
 	}
 	public static function portfolio( $atts ) {
@@ -240,12 +266,12 @@ final class WWP_Plugin {
 		<?php endforeach; ?>
 		<button type="button" class="btn btn-outline-secondary w-100" data-wwp-reset><?php esc_html_e( 'Reset filters', 'wp-web-projects' ); ?></button></aside>
 		<div class="<?php echo $canvas ? 'col-12' : 'col-lg-9'; ?> wwp-results"><p role="status" aria-live="polite" data-wwp-status data-format="<?php esc_attr_e( '%d projects', 'wp-web-projects' ); ?>"></p>
-		<div class="row g-4<?php echo $canvas ? ' wwp-project-grid' : ''; ?>">
+		<div class="row g-4 wwp-project-grid">
 		<?php foreach ( $cards as $card ) : $post = $card['post']; ?>
 		<div class="col-md-6 <?php echo $canvas ? 'col-xl-3' : 'col-xl-4'; ?> wwp-project" data-wwp-terms="<?php echo esc_attr( wp_json_encode( $card['ids'] ) ); ?>">
 		<article class="card h-100">
 		<?php $image_url = get_the_post_thumbnail_url( $post, 'full' ); if ( $image_url ) : ?>
-		<a class="nolightbox" href="<?php echo esc_url( $image_url ); ?>" data-wwp-image data-heading="<?php echo esc_attr( get_the_title( $post ) ); ?>" data-description="<?php echo esc_attr( self::card_excerpt( $post ) ); ?>" data-website="<?php echo esc_url( self::https_url( get_post_meta( $post->ID, '_wwp_url', true ) ) ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Preview image: %s', 'wp-web-projects' ), get_the_title( $post ) ) ); ?>"><?php echo get_the_post_thumbnail( $post, 'large', array( 'class' => 'card-img-top wwp-card-image nolightbox' ) ); ?></a>
+		<a class="nolightbox" href="<?php echo esc_url( $image_url ); ?>" data-wwp-image data-heading="<?php echo esc_attr( get_the_title( $post ) ); ?>" data-description="<?php echo esc_attr( self::card_excerpt( $post ) ); ?>" data-wwp-slides="<?php echo esc_attr( self::preview_gallery( $post->ID ) ); ?>" data-website="<?php echo esc_url( self::https_url( get_post_meta( $post->ID, '_wwp_url', true ) ) ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Preview image: %s', 'wp-web-projects' ), get_the_title( $post ) ) ); ?>"><?php echo get_the_post_thumbnail( $post, 'large', array( 'class' => 'card-img-top wwp-card-image nolightbox' ) ); ?></a>
 		<?php endif; ?>
 		<div class="card-body d-flex flex-column"><h2 class="h5 card-title"><?php echo self::preview_title( $post, $image_url ); ?></h2><p class="card-text"><?php echo esc_html( self::card_excerpt( $post ) ); ?></p>
 		</div></article></div>
@@ -271,7 +297,7 @@ final class WWP_Plugin {
 			$image_url = get_the_post_thumbnail_url( $post, 'full' ); ?>
 		<article class="wwp-project wwp-carousel-card">
 		<?php if ( $image_url ) : ?>
-		<a class="wwp-carousel-image nolightbox" href="<?php echo esc_url( $image_url ); ?>" data-wwp-image data-heading="<?php echo esc_attr( get_the_title( $post ) ); ?>" data-description="<?php echo esc_attr( self::card_excerpt( $post ) ); ?>" data-website="<?php echo esc_url( self::https_url( get_post_meta( $post->ID, '_wwp_url', true ) ) ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Preview image: %s', 'wp-web-projects' ), get_the_title( $post ) ) ); ?>"><?php echo get_the_post_thumbnail( $post, 'large', array( 'class' => 'wwp-card-image nolightbox' ) ); ?></a>
+		<a class="wwp-carousel-image nolightbox" href="<?php echo esc_url( $image_url ); ?>" data-wwp-image data-heading="<?php echo esc_attr( get_the_title( $post ) ); ?>" data-description="<?php echo esc_attr( self::card_excerpt( $post ) ); ?>" data-wwp-slides="<?php echo esc_attr( self::preview_gallery( $post->ID ) ); ?>" data-website="<?php echo esc_url( self::https_url( get_post_meta( $post->ID, '_wwp_url', true ) ) ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Preview image: %s', 'wp-web-projects' ), get_the_title( $post ) ) ); ?>"><?php echo get_the_post_thumbnail( $post, 'large', array( 'class' => 'wwp-card-image nolightbox' ) ); ?></a>
 		<?php endif; ?>
 		<div class="wwp-carousel-body"><h3 class="h5 card-title"><?php echo self::preview_title( $post, $image_url ); ?></h3>
 		<p class="wwp-carousel-excerpt"><?php echo esc_html( self::card_excerpt( $post ) ); ?></p></div>

@@ -17,12 +17,18 @@ function portfolio() {
   return { cards, inputs, allButtons, status, empty, reset, querySelector: (selector) => nodes[selector], querySelectorAll: (selector) => selector === '.wwp-project' ? cards : selector === '[data-wwp-all]' ? allButtons : inputs };
 }
 const first = portfolio(), second = portfolio();
-const image = {}, heading = {}, description = {}, position = {};
+const title = {}, captionTitle = {}, image = {}, heading = {}, description = {};
 const prev = element(), next = element(), close = element();
 let focused = false;
 const links = [0, 1].map((id) => element({ href: `image-${id}.jpg`, dataset: { heading: `Heading ${id}`, description: `Description ${id}`, website: id === 0 ? 'https://client.example.test/' : '' }, querySelector: () => ({ alt: `Alt ${id}` }), focus: () => { focused = true; } }));
+const slideNext = element(), slidePrev = element(), slidePosition = {};
+const slideControls = { contains: (target) => target === slideNext || target === slidePrev };
+links[1].dataset.wwpSlides = '';
+links[0].dataset.wwpSlides = JSON.stringify([
+  { url: 'gallery.jpg', alt: 'Gallery alt', heading: 'Gallery heading', description: 'Gallery description' },
+]);
 const website = element({ removeAttribute(name) { delete this[name]; } });
-const dialogNodes = { '[data-wwp-website]': website, img: image, '[data-wwp-heading]': heading, '[data-wwp-description]': description, '[data-wwp-position]': position, '[data-wwp-prev]': prev, '[data-wwp-next]': next, '[data-wwp-close]': close };
+const dialogNodes = { "[data-wwp-title]": title, "[data-wwp-caption-title]": captionTitle, ".wwp-slide-controls": slideControls, "[data-wwp-slide-next]": slideNext, "[data-wwp-slide-prev]": slidePrev, "[data-wwp-slide-position]": slidePosition, '[data-wwp-website]': website, img: image, '[data-wwp-heading]': heading, '[data-wwp-description]': description, '[data-wwp-prev]': prev, '[data-wwp-next]': next, '[data-wwp-close]': close };
 const dialog = element({ showModal() { this.open = true; }, close() { this.open = false; this.listeners.close(); }, querySelector: (selector) => dialogNodes[selector] });
 const titleTrigger = element({ closest: () => ({ querySelector: () => links[1] }), focus() { this.focused = true; } });
 const gallery = { querySelectorAll: (selector) => selector === '[data-wwp-image]' ? links : [titleTrigger], querySelector: () => dialog };
@@ -54,12 +60,32 @@ links[0].listeners.click({ preventDefault() {} });
 assert.equal(dialog.open, true); assert.equal(image.alt, 'Alt 0');
 assert.equal(description.textContent, 'Description 0', 'Popup shows the project excerpt');
 assert.equal(website.hidden, false); assert.equal(website.href, 'https://client.example.test/');
+assert.equal(title.textContent, 'Heading 0');
+assert.equal(heading.hidden, true);
+assert.equal(slideControls.hidden, false);
+slideNext.listeners.click();
+assert.equal(image.src, 'gallery.jpg');
+assert.equal(image.alt, 'Gallery alt');
+assert.equal(title.textContent, 'Heading 0');
+assert.equal(captionTitle.textContent, 'Heading 0');
+assert.equal(captionTitle.hidden, false);
+assert.equal(heading.hidden, false);
+assert.equal(heading.textContent, 'Gallery heading');
+assert.equal(description.textContent, 'Gallery description');
+assert.equal(slidePosition.textContent, '2 / 2');
+dialog.listeners.keydown({ key: 'ArrowLeft', target: slideNext, preventDefault() {} });
+assert.equal(image.src, 'image-0.jpg');
+slidePrev.listeners.click();
+assert.equal(image.src, 'gallery.jpg');
 next.listeners.click(); assert.equal(image.src, 'image-1.jpg');
+assert.equal(title.textContent, 'Heading 1');
+assert.equal(captionTitle.textContent, 'Heading 1');
+assert.equal(slideControls.hidden, true);
 assert.equal(website.hidden, true); assert.equal(website.href, undefined, 'Clear previous website URL when next project has none');
 next.listeners.click(); assert.equal(image.src, 'image-0.jpg');
 assert.equal(website.hidden, false, 'Restore website action when navigating back');
 dialog.listeners.keydown({ key: 'ArrowLeft', preventDefault() {} });
-assert.equal(heading.textContent, 'Heading 1'); assert.equal(position.textContent, '2 / 2');
+assert.equal(heading.textContent, 'Heading 1');
 close.listeners.click(); assert.equal(dialog.open, false); assert.equal(focused, true);
 console.log('PASS: filtering OR/AND, counts, reset, empty state, instance isolation and lightbox navigation/focus');
 
@@ -156,12 +182,14 @@ console.log('PASS: theme Swiper integration, contained breakpoints, keyboard/foc
 
 titleTrigger.listeners.click({ preventDefault() {} });
 assert.equal(image.src, 'image-1.jpg', 'Title opens the corresponding image');
-assert.equal(position.textContent, '1 / 1', 'Filtered gallery count excludes title triggers');
+next.listeners.click();
+assert.equal(image.src, 'image-1.jpg', 'Website navigation skips filtered projects');
 close.listeners.click();
 assert.equal(titleTrigger.focused, true, 'Popup returns focus to title opener');
 first.cards[0].hidden = false;
 titleTrigger.listeners.click({ preventDefault() {} });
-assert.equal(position.textContent, '2 / 2', 'Title triggers never duplicate popup images');
+next.listeners.click();
+assert.equal(image.src, 'image-0.jpg', 'Website navigation wraps without duplicating title triggers');
 close.listeners.click();
 console.log('PASS: project title popup, correct image sequence and title focus return');
 

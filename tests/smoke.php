@@ -13,7 +13,7 @@ function register_post_type( $name, $args ) { $GLOBALS['types'][$name] = $args; 
 function register_taxonomy( $name, $type, $args ) { $GLOBALS['taxonomies'][$name] = $args; }
 function absint( $value ) { return abs( (int) $value ); }
 function wp_attachment_is_image( $id ) { return in_array( $id, array( 10, 20 ), true ); }
-function esc_url_raw( $url, $protocols ) { return preg_match( '~^https://[^\s<>]+$~', $url ) ? $url : ''; }
+function esc_url_raw( $url, $protocols = null ) { return preg_match( '~^https://[^\s<>]+$~', $url ) ? $url : ''; }
 function wp_parse_url( $url, $component ) { return parse_url( $url, $component ); }
 function sanitize_text_field( $value ) { return is_scalar( $value ) ? trim( strip_tags( $value ) ) : ''; }
 function sanitize_textarea_field( $value ) { return sanitize_text_field( $value ); }
@@ -142,6 +142,13 @@ check_theme_lightbox_exclusion( $html );
 $original = WWP_Plugin::portfolio( array() );
 check( false !== strpos( $original, 'col-lg-3 wwp-filters' ) && false !== strpos( $original, 'col-xl-4 wwp-project' ), 'Original sidebar and three-column grid preserved' );
 check( false === strpos( $original, 'data-wwp-all' ), 'Canvas controls do not affect original shortcode' );
+foreach ( array( 'wwp_portfolio', 'wwp_portfolio_canvas' ) as $shortcode ) {
+	$output = call_user_func( $GLOBALS['shortcodes'][ $shortcode ], array() );
+	preg_match( '/data-wwp-slides="([^"]*)"/', $output, $slides );
+	$gallery = json_decode( html_entity_decode( $slides[1] ?? '', ENT_QUOTES ), true );
+	check( array( array( 'url' => 'https://example.test/gallery-full.jpg', 'alt' => '', 'heading' => 'Gallery image', 'description' => 'Details' ) ) === $gallery, 'Gallery slide data in ' . $shortcode );
+	check( false !== strpos( $output, 'data-wwp-slide-prev' ) && false !== strpos( $output, 'data-wwp-slide-next' ), 'Gallery navigation in ' . $shortcode );
+}
 echo "PASS: Canvas shortcode, two filter bars, escaped terms, four columns and original layout preservation\n";
 
 function wp_unique_id( $prefix = '' ) { static $id = 0; return $prefix . ++$id; }
